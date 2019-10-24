@@ -1,0 +1,10 @@
+minute_pickles/
+minute_models/
+pickles/
+__pycache__/modelLib.cpython-37.pyc
+*.h5
+*.pkl
+minute_pickles/test_pickles/dfticktest4.pkl
+*.pyc
+.vscode/settings.json
+.vscode/launch.json
