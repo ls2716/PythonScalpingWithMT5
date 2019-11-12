@@ -297,7 +297,7 @@ if __name__ == "__main__":
 
     print("\nTesting label setting...")
     lookup = 7
-    no_units_change = 3
+    no_units_change = 4
     try:
         md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
     except:
@@ -318,5 +318,5 @@ if __name__ == "__main__":
     print("Successfully tested sample generation.\n")
 
     print("Testing index matching.")
-    md.MatchIndex(is_this_test=False)
+    md.MatchIndex(is_this_test=True)
     print("Minute index matching successfully performed.\n")
