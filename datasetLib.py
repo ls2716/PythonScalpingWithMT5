@@ -18,11 +18,11 @@ class MinuteDataset():
     def __init__(self,read_ticks=True):
         # Reading data
         print('Reading.')
-        self.df1m = pd.read_pickle(r'.\minute_pickles\df1m.pkl')
+        self.df1m = pd.read_pickle(r'.\pickles\df1m.pkl')
         print('Read minute. Initialized.')
         self.read_ticks=read_ticks
         if read_ticks:
-            self.dfticks = pd.read_pickle(r'.\minute_pickles\dfticks.pkl')
+            self.dfticks = pd.read_pickle(r'.\pickles\dfticks.pkl')
             print('Read ticks. Initialized.')
         self.Rename()
         self.df = self.df1m
@@ -43,7 +43,7 @@ class MinuteDataset():
                                 list (range(1000,4000,60)) + list(range(4000,16000,240)) +\
                                  list(range(16000,72000,1440))+ list(range(72000,26000,10080)) #Which points are taken for minutes and offsets
         # Mean spread
-        self.mean_spread = 0.00014
+        self.mean_spread = 0.00014 #TODO: change as different for other currency pairs
    
     # Renaming column function
     def Rename(self):
@@ -279,7 +279,7 @@ class MinuteDataset():
 
 ########################################################################################
         
-## FINISHED :)
+## FINISHED :) TODO: update below
 """ The way dataset has to be used is by first initiation
 Then it should be tried to read jumped df - if not possible
 Then the Jumped df has to be created and saved.
@@ -295,21 +295,21 @@ if __name__ == "__main__":
     md = MinuteDataset()
     print(" - Successfully initialized.")
 
-    print("\nTesting label setting...")
-    lookup = 7
-    no_units_change = 4
-    try:
-        md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
-    except:
-        print('Failed to read')
-        md.SetLabelsBuy(lookup=lookup,no_units_change=no_units_change)
-        md.SaveLabelsBuy(lookup=lookup,no_units_change=no_units_change)
-    print(' - Successfully created labels.')
+    # print("\nTesting label setting...")
+    # lookup = 7
+    # no_units_change = 4
+    # try:
+    #     md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+    # except:
+    #     print('Failed to read')
+    #     md.SetLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+    #     md.SaveLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+    # print(' - Successfully created labels.')
 
-    print('\nTesting generating train and validation lists - underspampling.')
-    md.GenTrainValList(ratio=0.5,do_validation=True)
-    print('Successfully tested undersampling.\n')
-    print("Testing set preparation.")
+    # print('\nTesting generating train and validation lists - underspampling.')
+    # md.GenTrainValList(ratio=0.5,do_validation=True)
+    # print('Successfully tested undersampling.\n')
+    # print("Testing set preparation.")
 
     print("\tGenerating training, validation and test sets.")
     # ds.GenXY(1000,500)
@@ -318,5 +318,5 @@ if __name__ == "__main__":
     print("Successfully tested sample generation.\n")
 
     print("Testing index matching.")
-    md.MatchIndex(is_this_test=True)
+    md.MatchIndex(is_this_test=False)
     print("Minute index matching successfully performed.\n")

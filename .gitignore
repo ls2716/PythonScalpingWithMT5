@@ -8,3 +8,4 @@ minute_pickles/test_pickles/dfticktest4.pkl
 *.pyc
 .vscode/settings.json
 .vscode/launch.json
+archive
