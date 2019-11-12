@@ -1,8 +1,8 @@
 # ScalpingPythonMT5
 
 ## Table of contents / current status
-- getterLib.py done
-- datasetLib.py woking + improvements
+- [getterLib.py](getterLib.py) done
+- datasetLib.py working + improvements
 - modelLib.py done
 - evaluateLib.py - done + improvements
 - testerLib.py - to be done
