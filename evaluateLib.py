@@ -23,7 +23,7 @@ class ModelEvaluator():
         self.change_direction=change_direction
 
     # Evaluating model on test dataset using precision matrix
-    def ModelEvaluateConfustionMatrix(self,threshold):
+    def ModelEvaluateConfusionMatrix(self,threshold):
         print('\tEvaluating.')
         self.dataset.GenXY(2)
         X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
@@ -93,5 +93,5 @@ if __name__ == "__main__":
     
     threshold = 0.5
     print("\nEvaluating confuction matrix for the model.")
-    me.ModelEvaluateConfustionMatrix(threshold=threshold)
+    me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")
