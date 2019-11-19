@@ -4,11 +4,16 @@ import os
 import sys
 import csv
 
-""" This class reads the bar and ticks data from a file into a pandas dataframe and then saves it"""
 
 class Getter():
+    """ Getter object which gets the currency timeseries data
+        from the MT5 folder.
+    """
     
     def __init__(self,data_dir="000"):
+        """ Initialization - creating dataframes to hold timeseries data
+            with names df<period>
+        """
         self.data_dir = data_dir
         self.df1m = pd.DataFrame()
         self.df5m = pd.DataFrame()
@@ -23,6 +28,9 @@ class Getter():
         self.periods = ['1m','5m','15m','30m','1h','4h','1d','1w','1mn']  
 
     def CheckDir(self):
+        """ Checking MT5 folder reference function -
+           whether one exists or not yet set up.
+        """
         if (self.data_dir=="000"):
             print("Data directory not initialized.")
             return False
@@ -38,10 +46,15 @@ class Getter():
     
 
     def SetDefaultDir(self):
+        """ Function hard-coding directory with currency data
+        """
         print('Setting Default Data Directory')
         self.data_dir = r"C:\Users\Lukasz\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Files"
 
     def ReadData(self):
+        """ Function which reads the data from csv files
+           in the MT5 folder into pandas dataframes
+        """
         print("Reading data:")
         print('Reading 1 minute', end='',flush=True)
         self.df1m = pd.read_csv(os.path.join(self.data_dir,'TrainData','1m.csv'),header=None)
@@ -80,6 +93,9 @@ class Getter():
         print('Reindexed.')
 
     def SaveData(self):
+        """ Funcion which saves dataframes as pickles
+           into 'pickles' folder.
+        """
         self.df1m.to_pickle(r'.\pickles\df1m.pkl')
         self.df1m.to_pickle(r'.\minute_pickles\df1m.pkl')
         self.df5m.to_pickle(r'.\pickles\df5m.pkl')

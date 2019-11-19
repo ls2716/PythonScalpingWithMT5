@@ -3,7 +3,7 @@
 ## Table of contents / current status
 - [getterLib.py](getterLib.py) - done
 - [datasetLib.py](datasetLib.py) - working + improvements
-- [modelLib.py](modelLib.py) - done
+- [modelLib.py](modelLib.py) - done + improvements
 - [evaluateLib.py](evaluateLib.py) - done + improvements
 - [testerLib.py](testerLib.py) - to be done
 

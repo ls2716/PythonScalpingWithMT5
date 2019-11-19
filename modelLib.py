@@ -14,9 +14,30 @@ from datasetLib import MinuteDataset
 
 
 class SclMinModel():
+    """ SclMinModel object is an object used for creating,
+        training multi-layer-perceptron models and using them for inference
+        for purposes of scalping with Python.
+
+        The SclMinModel is supposed to be used together with MinuteDataset
+        for training/validation data fetching.
+    
+    
+    USAGE:
+    1. Initialize the model with dataset and event parameters.
+    2. Create model.
+    3a. Train ensemble.
+    3b. Use ensemble for inference.
+    """
+
 
     # Model Initialization
-    def __init__(self,dataset,lookup,no_units_change,change_direction):
+    def __init__(self, dataset, lookup, no_units_change, change_direction):
+        """ Class initialization function setting up the class variables.
+            dataset - minute dataset variable
+            lookup, no_units_change - look MinuteDataset 
+            change_direction - either 'buy'/'sell' - for naming purposes only
+                does not make difference for training or inference
+        """
         self.dataset = dataset
         self.lookup = lookup
         self.no_units_change=no_units_change
@@ -24,7 +45,19 @@ class SclMinModel():
 
     # Creating model with name of the ensemble to save separate models in
     def CreateModel(self):
-        self.ensemble_name = "ensemble_"+str(self.lookup)+"_"+str(self.no_units_change)+"_"+self.change_direction
+        """ Function which initializes the model with hard-coded architecture,
+            optimizer, loss function and metrics,
+            together with a folder to which save the ensemble models.
+
+            The ensemble_name class variable is created with name of format:
+            'ensemble_<lookup>_<no_units_change>_<change_direction>'
+
+            The summary of the model is printed after initialization.
+        """
+
+
+        self.ensemble_name = "ensemble_"+str(self.lookup)+"_"\
+                        +str(self.no_units_change)+"_"+self.change_direction
         print("\tEnsemble name:",self.ensemble_name)
         foldername = "minute_models/"+self.ensemble_name
         if not os.path.exists(foldername):
@@ -56,24 +89,53 @@ class SclMinModel():
 
     # Training enseble of models and saving them in the ensemble folder
     def ModelTrain(self,how_many_models, epochs):
+        """ Function which based on required number of models
+            and number of epochs.
+
+            aguments:
+            :param int how_many_models - number of models to be trained
+            :param int epochs - number of epochs for training
+
+            Models are trained with early stopping of patience 40 and 
+            model checkpointing. The models are saved in path
+            'minute_models/<ensemble_name>/' with name:
+            'bestofmodel_<number_of_model>.h5'.
+
+            The history of training is appended to class variable
+            hist_list.
+        """
+
         self.hist_list=[]
         self.train_num=None
         self.val_num=None
         for i in range(0,how_many_models):
             self.CreateModel()
             print('Global epoch:',i+1)
-            self.dataset.GenTrainValList(ratio=0.4,do_validation=True)
+            self.dataset.GenTrainValList(ratio=0.4, do_validation=True)
             self.dataset.GenXY(self.train_num,self.val_num)
             X_train,Y_train = self.dataset.X_train, self.dataset.Y_train
             X_val,Y_val = self.dataset.X_val, self.dataset.Y_val
             filepath='minute_models/'+self.ensemble_name+'/bestofmodel_'+str(i)+'.h5' 
-            checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-            earlystop = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=40)
+            checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1,\
+                         save_best_only=True, mode='min')
+            earlystop = EarlyStopping(monitor='val_loss', mode='min', verbose=1,\
+                         patience=40)
             callbacks_list = [checkpoint,earlystop]
-            hist = self.model.fit(x=X_train,y=Y_train,epochs=epochs,batch_size=512,shuffle=True,validation_data=(X_val,Y_val),callbacks=callbacks_list)
+            hist = self.model.fit(x=X_train, y=Y_train, epochs=epochs, batch_size=512,\
+                                shuffle=True, validation_data=(X_val,Y_val),\
+                                callbacks=callbacks_list)
             self.hist_list.append(hist)
     
     def ModelLoad(self,model_number):
+        """ Function which loads each model into memory for inference.
+            Not the best solution as this takes unnecessary amount of time.
+            :todo: load all models at once
+
+            arguments:
+            :param: int model_number - number of model from the ensemble
+                cannot be bigger than the total number of models trained
+            """
+
         try:
             self.model.load_weights('minute_models/'+self.ensemble_name+'/bestofmodel_'+str(model_number)+'.h5') 
             print('Successfully loaded.')
@@ -82,6 +144,18 @@ class SclMinModel():
 
     # Ensemble predict
     def EnsemblePredict(self,X,no_models):
+        """ Function which performs ensemble predict for
+            given feature array X.
+
+            arguments:
+            :param array<float> X - array of rows with features
+            :param int no_model - number of models used for prediction
+                cannot be greater than the number of trained models 
+                in the ensemble
+            
+            :returns: array Y - array of predictions
+        """
+
         print('Ensemble predict.')
         Y_pred=np.zeros(X.shape[0])
         Y_pred=Y_pred.reshape(-1,1)
@@ -93,17 +167,22 @@ class SclMinModel():
 
     # Enhancing jumped arrrays to exclude problematic samples
     def EnhanceJumped(self):
-        """Function which enhances the jumped array
-        deleting data which causes problems
+        """ Function which enhances the jumped array
+            deleting data which causes problems
+            :todo: TO BE DONE
         """
         pass
 
 
     def ShowHistory(self):
+        """ Function which shows history of training for models.
+            Not finished yet as no need for it was detected.
+        """
         pass
 
     
-    
+
+
             
 
 
