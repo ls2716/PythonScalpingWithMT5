@@ -44,7 +44,7 @@ class SclMinModel():
         self.change_direction=change_direction
 
     # Creating model with name of the ensemble to save separate models in
-    def CreateModel(self):
+    def CreateModel(self, type='dense_mlp'):
         """ Function which initializes the model with hard-coded architecture,
             optimizer, loss function and metrics,
             together with a folder to which save the ensemble models.
@@ -62,27 +62,31 @@ class SclMinModel():
         foldername = "minute_models/"+self.ensemble_name
         if not os.path.exists(foldername):
             os.makedirs(foldername)
+        
+        if (type=='dense_mlp'):
+            self.model = Sequential()
+            self.model.add(Dense(2056, activation='relu', input_dim=self.dataset.SampleShape()[0]))
+            self.model.add(Dropout(rate=0.5))
+            self.model.add(Dense(1024, activation='relu'))
+            self.model.add(BatchNormalization())
+            self.model.add(Dropout(rate=0.45))
+            self.model.add(Dense(512, activation='relu'))
+            self.model.add(BatchNormalization())
+            self.model.add(Dropout(rate=0.35))
+            self.model.add(Dense(256, activation='relu'))
+            self.model.add(Dropout(rate=0.1))
+            self.model.add(Dense(64, activation='relu'))
+            self.model.add(Dropout(rate=0.1))
+            self.model.add(Dense(self.dataset.SampleShape()[1], activation='sigmoid'))
 
-        self.model = Sequential()
-        self.model.add(Dense(2056, activation='relu', input_dim=self.dataset.SampleShape()[0]))
-        self.model.add(Dropout(rate=0.5))
-        self.model.add(Dense(1024, activation='relu'))
-        self.model.add(BatchNormalization())
-        self.model.add(Dropout(rate=0.45))
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(BatchNormalization())
-        self.model.add(Dropout(rate=0.35))
-        self.model.add(Dense(256, activation='relu'))
-        self.model.add(Dropout(rate=0.1))
-        self.model.add(Dense(64, activation='relu'))
-        self.model.add(Dropout(rate=0.1))
-        self.model.add(Dense(self.dataset.SampleShape()[1]))
+            adam = optimizers.Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
 
-        adam = optimizers.Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+            self.model.compile(optimizer=adam,
+                loss='binary_crossentropy', #rms does not work very well with sigmoid
+                metrics=['mean_absolute_error'])
 
-        self.model.compile(optimizer=adam,
-              loss='mean_absolute_error',
-              metrics=['mean_absolute_error'])
+        elif (type=='locally_connected'):
+            pass
 
         print("\t Printing model summary.")
         self.model.summary()

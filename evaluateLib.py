@@ -11,10 +11,23 @@ from keras import optimizers
 import matplotlib.pyplot as plt
 from datasetLib import MinuteDataset
 from modelLib import SclMinModel
+from copy import deepcopy
 
 class ModelEvaluator():
+    """ Object used for evaluating models for Python Scalping
+        It shoulb be used in conjunction with Minutedataset and SclMinModel.
+    
+        USAGE:
+        1. Initiate
+        2. Use any evaluation function
+    """
 
     def __init__(self,dataset,model,no_models,lookup,no_units_change,change_direction):
+        """ Initialization function. The input variable are explanatory
+            based on other models. the dataset is the MinuteDataset object.
+            The model is the SclMinModel object.
+        """
+
         self.dataset = dataset
         self.model = model
         self.no_models = no_models
@@ -23,12 +36,16 @@ class ModelEvaluator():
         self.change_direction=change_direction
 
     # Evaluating model on test dataset using precision matrix
-    def ModelEvaluateConfusionMatrix(self,threshold):
-        print('\tEvaluating.')
-        self.dataset.GenXY(2)
+    def ModelEvaluateConfusionMatrix(self, threshold):
+        """ Evaluating confusion matrix based on threshold.
+        """
+
+        print('\tEvaluating confuction matrix.')
+        # Generating test set
+        self.dataset.GenXY(2,2)
         X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
-        Y_pred = self.model.EnsemblePredict(X_true,no_models=self.no_models)
-        self.wynik = np.concatenate((Y_true,Y_pred),axis=1)
+        Y_pred = self.model.EnsemblePredict(X_true, no_models=self.no_models)
+        self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
         self.wynik_int = np.around(self.wynik).astype(int)
         self.tp=0
         self.tn=0
@@ -63,6 +80,38 @@ class ModelEvaluator():
         plt.legend()
         plt.show()
 
+    def ModelEvaluateRocCurve(self, thresholds=[]):
+        """ Function which evaluates ROC curve for the model based on the threshold
+        """
+        # Generating test set
+        self.dataset.GenXY(2,2)
+        X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
+        Y_pred = self.model.EnsemblePredict(X_true, no_models=self.no_models)
+        self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+        tmp = self.wynik
+        if (thresholds.__len__()<1):
+            thresholds = np.linspace(0, 1, 20, endpoint=False)
+        tprs = []
+        fprs = [] 
+        for threshold in thresholds:
+            print("Evaluating for:", threshold)
+            wynik_thresholded = deepcopy(tmp)
+            wynik_thresholded[:,1] = tmp[:,1]>threshold
+            self.wynik_thresholded = wynik_thresholded.astype(int)
+            print(sum(self.wynik_thresholded[:,1]))
+            tp_array = wynik_thresholded[:,0] * wynik_thresholded[:,1]
+            fp_array = (1 - wynik_thresholded[:,0]) * wynik_thresholded[:,1]
+            print(sum(tp_array), sum(fp_array))
+            tpr = sum(tp_array)/(tp_array.shape[0])
+            fpr = sum(fp_array)/(fp_array.shape[0])
+            tprs.append(tpr)
+            fprs.append(fpr)
+            print("Evaluated for:", threshold, "tpr:", tpr, "fpr:", fpr)
+        plt.plot(fprs, tprs)
+        plt.show()
+
+        
+
 if __name__ == "__main__":
     print("\nRun as main - TESTING module")
 
@@ -87,11 +136,16 @@ if __name__ == "__main__":
     print("Successfully created model.")
 
     no_models = 1
+    smm.ModelTrain(how_many_models=no_models, epochs=100)
     print("\nTesting Evaluator initialization.")
     me = ModelEvaluator(dataset=md,model=smm,no_models=no_models,lookup=lookup,no_units_change=no_units_change,change_direction='buy')
     print("Successfully created Evaluator object.")
     
     threshold = 0.5
     print("\nEvaluating confuction matrix for the model.")
-    me.ModelEvaluateConfusionMatrix(threshold=threshold)
+    # me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")
+
+    print("\nEvaluating ROC curve for the model.")
+    me.ModelEvaluateRocCurve(thresholds=[])
+    print("Successfully evaluated ROC curve for the model.")
