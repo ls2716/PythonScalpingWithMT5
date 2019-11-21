@@ -56,14 +56,14 @@ class ModelEvaluator():
         self.true_positives =[]
         self.false_positives=[]
         for i in range(tmp.shape[0]):
-            if (tmp[i,0]>threshold):
-                if (tmp[i,1]>threshold):
+            if (tmp[i,0]>=threshold):
+                if (tmp[i,1]>=threshold):
                     self.tp+=1
                     self.true_positives.append([self.dataset.test_indices[i],self.wynik[i,1]])
                 else:
                     self.fn+=1
             else:
-                if (tmp[i,1]>threshold):
+                if (tmp[i,1]>=threshold):
                     self.fp+=1
                     self.false_positives.append([self.dataset.test_indices[i],self.wynik[i,1]])
                 else:
@@ -96,14 +96,16 @@ class ModelEvaluator():
         for threshold in thresholds:
             print("Evaluating for:", threshold)
             wynik_thresholded = deepcopy(tmp)
-            wynik_thresholded[:,1] = tmp[:,1]>threshold
+            wynik_thresholded[:,1] = tmp[:,1]>=threshold
             self.wynik_thresholded = wynik_thresholded.astype(int)
             print(sum(self.wynik_thresholded[:,1]))
             tp_array = wynik_thresholded[:,0] * wynik_thresholded[:,1]
             fp_array = (1 - wynik_thresholded[:,0]) * wynik_thresholded[:,1]
+            fn_array = (wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
+            tn_array = (1 - wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
             print(sum(tp_array), sum(fp_array))
-            tpr = sum(tp_array)/(tp_array.shape[0])
-            fpr = sum(fp_array)/(fp_array.shape[0])
+            tpr = sum(tp_array)/(sum(tp_array)+sum(fn_array))
+            fpr = sum(fp_array)/(sum(fp_array)+sum(tn_array))
             tprs.append(tpr)
             fprs.append(fpr)
             print("Evaluated for:", threshold, "tpr:", tpr, "fpr:", fpr)
@@ -136,16 +138,17 @@ if __name__ == "__main__":
     print("Successfully created model.")
 
     no_models = 1
-    smm.ModelTrain(how_many_models=no_models, epochs=100)
+    # smm.ModelTrain(how_many_models=no_models, epochs=100)
     print("\nTesting Evaluator initialization.")
     me = ModelEvaluator(dataset=md,model=smm,no_models=no_models,lookup=lookup,no_units_change=no_units_change,change_direction='buy')
     print("Successfully created Evaluator object.")
     
-    threshold = 0.5
-    print("\nEvaluating confuction matrix for the model.")
-    # me.ModelEvaluateConfusionMatrix(threshold=threshold)
-    print("Successfully evaluated confusion matrix for the model.")
 
     print("\nEvaluating ROC curve for the model.")
     me.ModelEvaluateRocCurve(thresholds=[])
     print("Successfully evaluated ROC curve for the model.")
+
+    threshold = 0.6
+    print("\nEvaluating confuction matrix for the model.")
+    me.ModelEvaluateConfusionMatrix(threshold=threshold)
+    print("Successfully evaluated confusion matrix for the model.")
