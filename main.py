@@ -54,7 +54,7 @@ def EvaluateModel(lookup, no_units_change, smm, no_models = 1):
     me.ModelEvaluateRocCurve(thresholds=[])
     print("Successfully evaluated ROC curve for the model.")
 
-    threshold = 0.6
+    threshold = 0.3
     print("\nEvaluating confusion matrix for the model.")
     me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")

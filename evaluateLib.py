@@ -34,6 +34,7 @@ class ModelEvaluator():
         self.lookup = lookup
         self.no_units_change=no_units_change
         self.change_direction=change_direction
+        self.wynik_done = False
 
     # Evaluating model on test dataset using precision matrix
     def ModelEvaluateConfusionMatrix(self, threshold):
@@ -42,10 +43,12 @@ class ModelEvaluator():
 
         print('\tEvaluating confusion matrix.')
         # Generating test set
-        self.dataset.GenXY(2,2)
-        X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
-        Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
-        self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+        if (not self.wynik_done):
+            self.dataset.GenXY(2,2)
+            X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+            Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+            self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+            self.wynik_done = True
         self.wynik_int = np.around(self.wynik).astype(int)
         self.tp=0
         self.tn=0
@@ -83,11 +86,13 @@ class ModelEvaluator():
     def ModelEvaluateRocCurve(self, thresholds=[]):
         """ Function which evaluates ROC curve for the model based on the threshold
         """
-        # Generating test set
-        self.dataset.GenXY(2,2)
-        X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
-        Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
-        self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+        
+        if (not self.wynik_done):
+            self.dataset.GenXY(2,2)
+            X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+            Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+            self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+            self.wynik_done = True
         tmp = self.wynik
         if (thresholds.__len__()<1):
             thresholds = np.linspace(0, 1, 20, endpoint=False)
@@ -112,6 +117,37 @@ class ModelEvaluator():
         plt.plot(fprs, tprs)
         plt.show()
 
+    def ModelEvaluatePrecisionCurve(self, thresholds=[]):
+        """ Function which precision vs classification threshold
+        """
+        if (not self.wynik_done):
+            self.dataset.GenXY(2,2)
+            X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+            Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+            self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+            self.wynik_done = True
+        tmp = self.wynik
+        if (thresholds.__len__()<1):
+            thresholds = np.linspace(0, 1, 20, endpoint=False)
+        precisions = []
+        for threshold in thresholds:
+            print("Evaluating for:", threshold)
+            wynik_thresholded = deepcopy(tmp)
+            wynik_thresholded[:,1] = tmp[:,1]>=threshold
+            self.wynik_thresholded = wynik_thresholded.astype(int)
+            print(sum(self.wynik_thresholded[:,1]))
+            tp_array = wynik_thresholded[:,0] * wynik_thresholded[:,1]
+            fp_array = (1 - wynik_thresholded[:,0]) * wynik_thresholded[:,1]
+            fn_array = (wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
+            tn_array = (1 - wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
+            precision = 0
+            try:
+                precision = sum(tp_array)/(sum(tp_array)+sum(fp_array))
+            except:
+                pass
+            precisions.append(precision)
+        plt.plot(thresholds, precisions)
+        plt.show()
         
 
 if __name__ == "__main__":
@@ -134,10 +170,11 @@ if __name__ == "__main__":
 
     print("\nCreating model.")
     smm = SclMinModel(dataset=md,lookup=lookup,no_units_change=no_units_change,change_direction='buy')
+    smm.CreateModel(model_type='locally_connected')
     print("Successfully created model.")
 
-    no_models = 3
-    smm.ModelTrain(model_type='locally_connected', how_many_models=no_models, epochs=20)
+    no_models = 1
+    #smm.ModelTrain(model_type='locally_connected', how_many_models=no_models, epochs=20)
     print("\nTesting Evaluator initialization.")
     me = ModelEvaluator(dataset=md, model=smm, no_models=no_models, lookup=lookup,\
             no_units_change=no_units_change,change_direction='buy')
@@ -148,7 +185,12 @@ if __name__ == "__main__":
     me.ModelEvaluateRocCurve(thresholds=[])
     print("Successfully evaluated ROC curve for the model.")
 
+    print("\nEvaluating precision curve for the model.")
+    me.ModelEvaluatePrecisionCurve(thresholds=[])
+    print("Successfully evaluated precision curve for the model.")
+
     threshold = 0.6
     print("\nEvaluating confusion matrix for the model.")
     me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")
+
