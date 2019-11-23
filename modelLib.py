@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import os
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, BatchNormalization
+from keras.layers import Dense, Dropout, BatchNormalization, LocallyConnected1D, Flatten, Reshape
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 import keras.backend as K
 import matplotlib.pyplot as plt
@@ -44,7 +44,7 @@ class SclMinModel():
         self.change_direction=change_direction
 
     # Creating model with name of the ensemble to save separate models in
-    def CreateModel(self, type='dense_mlp'):
+    def CreateModel(self, model_type):
         """ Function which initializes the model with hard-coded architecture,
             optimizer, loss function and metrics,
             together with a folder to which save the ensemble models.
@@ -59,11 +59,13 @@ class SclMinModel():
         self.ensemble_name = "ensemble_"+str(self.lookup)+"_"\
                         +str(self.no_units_change)+"_"+self.change_direction
         print("\tEnsemble name:",self.ensemble_name)
+        print('Model type:', model_type)
         foldername = "minute_models/"+self.ensemble_name
         if not os.path.exists(foldername):
             os.makedirs(foldername)
         
-        if (type=='dense_mlp'):
+        if (model_type=='dense_mlp'):
+            self.input_shape = (-1, self.dataset.SampleShape()[0])
             self.model = Sequential()
             self.model.add(Dense(2056, activation='relu', input_dim=self.dataset.SampleShape()[0]))
             self.model.add(Dropout(rate=0.5))
@@ -85,14 +87,49 @@ class SclMinModel():
                 loss='binary_crossentropy', #rms does not work very well with sigmoid
                 metrics=['mean_absolute_error'])
 
-        elif (type=='locally_connected'):
-            pass
+        elif (model_type=='locally_connected'):
+            print('building')
+            self.input_shape = (-1, self.dataset.SampleShape()[0], 1)
+            self.model = Sequential()
 
+            self.model.add(LocallyConnected1D(4, 60, padding='valid', activation='relu',\
+                                    input_shape=(self.dataset.SampleShape()[0],1)))
+            self.model.add(Dropout(rate=0.5))
+            #self.model.add(LocallyConnected1D(8, 20, padding='valid', activation='relu'))
+            #self.model.add(Dropout(rate=0.5))
+            self.model.add(Flatten())
+            self.model.add(Dense(512, activation='relu'))
+            self.model.add(BatchNormalization())
+            self.model.add(Dropout(rate=0.45))
+            self.model.add(Dense(512, activation='relu'))
+            self.model.add(BatchNormalization())
+            self.model.add(Dropout(rate=0.35))
+            self.model.add(Dense(256, activation='relu'))
+            self.model.add(Dropout(rate=0.1))
+            self.model.add(Dense(64, activation='relu'))
+            self.model.add(Dropout(rate=0.1))
+            self.model.add(Dense(self.dataset.SampleShape()[1], activation='sigmoid'))
+
+            adam = optimizers.Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+
+            self.model.compile(optimizer=adam,
+                loss='binary_crossentropy', #rms does not work very well with sigmoid
+                metrics=['mean_absolute_error'])
+
+            # WORKS BETTER for 5 3
+            # self.model = Sequential()
+            # self.model.add(LocallyConnected1D(24, 90, padding='valid', activation='relu',\
+            #                         input_shape=(self.dataset.SampleShape()[0], 1)))
+            # self.model.add(Dropout(rate=0.5))
+            # self.model.add(LocallyConnected1D(48, 30, padding='valid', activation='relu'))
+            # self.model.add(Dropout(rate=0.5))
+            # self.model.add(Flatten())
+            # self.model.add(Dense(768, activation='relu'))
         print("\t Printing model summary.")
         self.model.summary()
 
     # Training enseble of models and saving them in the ensemble folder
-    def ModelTrain(self,how_many_models, epochs):
+    def ModelTrain(self, model_type, how_many_models, epochs):
         """ Function which based on required number of models
             and number of epochs.
 
@@ -113,18 +150,18 @@ class SclMinModel():
         self.train_num=None
         self.val_num=None
         for i in range(0,how_many_models):
-            self.CreateModel()
+            self.CreateModel(model_type=model_type)
             print('Global epoch:',i+1)
             self.dataset.GenTrainValList(ratio=0.4, do_validation=True)
             self.dataset.GenXY(self.train_num,self.val_num)
-            X_train,Y_train = self.dataset.X_train, self.dataset.Y_train
-            X_val,Y_val = self.dataset.X_val, self.dataset.Y_val
+            X_train, Y_train = self.dataset.X_train.reshape(self.input_shape), self.dataset.Y_train
+            X_val, Y_val = self.dataset.X_val.reshape(self.input_shape), self.dataset.Y_val
             filepath='minute_models/'+self.ensemble_name+'/bestofmodel_'+str(i)+'.h5' 
             checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1,\
                          save_best_only=True, mode='min')
             earlystop = EarlyStopping(monitor='val_loss', mode='min', verbose=1,\
-                         patience=40)
-            callbacks_list = [checkpoint,earlystop]
+                         patience=30)
+            callbacks_list = [checkpoint, earlystop]
             hist = self.model.fit(x=X_train, y=Y_train, epochs=epochs, batch_size=512,\
                                 shuffle=True, validation_data=(X_val,Y_val),\
                                 callbacks=callbacks_list)
@@ -202,7 +239,7 @@ if __name__ == "__main__":
     lookup = 7
     no_units_change = 3
     try:
-        md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+        md.ReadLabelsBuy(lookup=lookup, no_units_change=no_units_change)
     except:
         print('Failed to read - Setting buy labels.')
         md.SetLabelsBuy(lookup=lookup,no_units_change=no_units_change)

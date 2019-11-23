@@ -158,7 +158,7 @@ class MinuteDataset():
             if spread<0.00008:
                 spread=mean_spread
             difference = no_units_change*spread
-            if (y.max()>difference):
+            if (y.max()>difference)&(y.min()>-spread):
                 self.labels[current_index]=1
             if (how_many_done%5000==0):        
                 progress = int(how_many_done/(start_index-end_index)*100)
@@ -293,8 +293,7 @@ class MinuteDataset():
             :returns: number of features (int), number of outputs (int)
         """
 
-        x,y = self.PrepareUnit(0)
-        return x.shape[1],y.shape[1]
+        return (self.indices_offsets.__len__()*3+1 , 1)
 
     # Generating train and validation list with target minority class ratio
     def GenTrainValList(self,ratio,do_validation):

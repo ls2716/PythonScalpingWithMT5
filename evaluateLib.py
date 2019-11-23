@@ -40,11 +40,11 @@ class ModelEvaluator():
         """ Evaluating confusion matrix based on threshold.
         """
 
-        print('\tEvaluating confuction matrix.')
+        print('\tEvaluating confusion matrix.')
         # Generating test set
         self.dataset.GenXY(2,2)
-        X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
-        Y_pred = self.model.EnsemblePredict(X_true, no_models=self.no_models)
+        X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+        Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
         self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
         self.wynik_int = np.around(self.wynik).astype(int)
         self.tp=0
@@ -86,7 +86,7 @@ class ModelEvaluator():
         # Generating test set
         self.dataset.GenXY(2,2)
         X_true,Y_true = self.dataset.X_test, self.dataset.Y_test
-        Y_pred = self.model.EnsemblePredict(X_true, no_models=self.no_models)
+        Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
         self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
         tmp = self.wynik
         if (thresholds.__len__()<1):
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     print(" - Successfully initialized.")
    
     print("\nGetting label setting...")
-    lookup = 7
+    lookup = 5
     no_units_change = 3
     try:
         md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
@@ -134,13 +134,13 @@ if __name__ == "__main__":
 
     print("\nCreating model.")
     smm = SclMinModel(dataset=md,lookup=lookup,no_units_change=no_units_change,change_direction='buy')
-    smm.CreateModel()
     print("Successfully created model.")
 
-    no_models = 1
-    # smm.ModelTrain(how_many_models=no_models, epochs=100)
+    no_models = 3
+    smm.ModelTrain(model_type='locally_connected', how_many_models=no_models, epochs=20)
     print("\nTesting Evaluator initialization.")
-    me = ModelEvaluator(dataset=md,model=smm,no_models=no_models,lookup=lookup,no_units_change=no_units_change,change_direction='buy')
+    me = ModelEvaluator(dataset=md, model=smm, no_models=no_models, lookup=lookup,\
+            no_units_change=no_units_change,change_direction='buy')
     print("Successfully created Evaluator object.")
     
 
@@ -149,6 +149,6 @@ if __name__ == "__main__":
     print("Successfully evaluated ROC curve for the model.")
 
     threshold = 0.6
-    print("\nEvaluating confuction matrix for the model.")
+    print("\nEvaluating confusion matrix for the model.")
     me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")
