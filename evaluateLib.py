@@ -35,20 +35,34 @@ class ModelEvaluator():
         self.no_units_change=no_units_change
         self.change_direction=change_direction
         self.wynik_done = False
+        self.wynik_val_done = False
 
     # Evaluating model on test dataset using precision matrix
-    def ModelEvaluateConfusionMatrix(self, threshold):
+    def ModelEvaluateConfusionMatrix(self, threshold, onval=False):
         """ Evaluating confusion matrix based on threshold.
         """
 
         print('\tEvaluating confusion matrix.')
         # Generating test set
-        if (not self.wynik_done):
-            self.dataset.GenXY(2,2)
-            X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
-            Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
-            self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
-            self.wynik_done = True
+        if onval:
+            if (not self.wynik_val_done):
+                self.dataset.GenXY(2, None)
+                X_true, Y_true = self.dataset.X_val, self.dataset.Y_val
+                Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+                self.wynik_val = np.concatenate((Y_true, Y_pred), axis=1)
+                self.wynik_val_done = True
+            tmp = self.wynik_val
+            print('Evaluating on validation set.')
+        else:
+            if (not self.wynik_done):
+                self.dataset.GenXY(2,2)
+                X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+                Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+                self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+                self.wynik_done = True
+            tmp = self.wynik
+            print('Evaluating on test set.')
+
         self.wynik_int = np.around(self.wynik).astype(int)
         self.tp=0
         self.tn=0
@@ -83,17 +97,29 @@ class ModelEvaluator():
         plt.legend()
         plt.show()
 
-    def ModelEvaluateRocCurve(self, thresholds=[]):
+    def ModelEvaluateRocCurve(self, thresholds=[], onval=False):
         """ Function which evaluates ROC curve for the model based on the threshold
         """
         
-        if (not self.wynik_done):
-            self.dataset.GenXY(2,2)
-            X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
-            Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
-            self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
-            self.wynik_done = True
-        tmp = self.wynik
+        if onval:
+            if (not self.wynik_val_done):
+                self.dataset.GenXY(2, None)
+                X_true, Y_true = self.dataset.X_val, self.dataset.Y_val
+                Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+                self.wynik_val = np.concatenate((Y_true, Y_pred), axis=1)
+                self.wynik_val_done = True
+            tmp = self.wynik_val
+            print('Evaluating on validation set.')
+        else:
+            if (not self.wynik_done):
+                self.dataset.GenXY(2,2)
+                X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
+                Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+                self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
+                self.wynik_done = True
+            tmp = self.wynik
+            print('Evaluating on test set.')
+        
         if (thresholds.__len__()<1):
             thresholds = np.linspace(0, 1, 20, endpoint=False)
         tprs = []
@@ -117,9 +143,54 @@ class ModelEvaluator():
         plt.plot(fprs, tprs)
         plt.show()
 
-    def ModelEvaluatePrecisionCurve(self, thresholds=[]):
+    def ModelEvaluatePrecisionCurve(self, thresholds=[], onval=False, plot=True):
         """ Function which precision vs classification threshold
         """
+        if onval:
+            if (not self.wynik_val_done):
+                self.dataset.GenXY(2, None)
+                X_true, Y_true = self.dataset.X_val, self.dataset.Y_val
+                Y_pred = self.model.EnsemblePredict(X_true.reshape(self.model.input_shape), no_models=self.no_models)
+                self.wynik_val = np.concatenate((Y_true, Y_pred), axis=1)
+                self.wynik_val_done = True
+            tmp = self.wynik_val
+            print('Evaluating on validation set.')
+        
+
+            if (thresholds.__len__()<1):
+                thresholds = np.linspace(0, 1, 50, endpoint=False)
+            precisions = []
+            best_th = None
+            for i, threshold in enumerate(thresholds):
+                print("Evaluating for:", threshold)
+                wynik_thresholded = deepcopy(tmp)
+                wynik_thresholded[:,1] = tmp[:,1]>=threshold
+                self.wynik_thresholded = wynik_thresholded.astype(int)
+                ratio = sum(self.wynik_thresholded[:,1])/self.wynik_thresholded.shape[0]
+                
+                tp_array = wynik_thresholded[:,0] * wynik_thresholded[:,1]
+                fp_array = (1 - wynik_thresholded[:,0]) * wynik_thresholded[:,1]
+                fn_array = (wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
+                tn_array = (1 - wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
+                precision = 0
+                try:
+                    precision = sum(tp_array)/(sum(tp_array)+sum(fp_array))
+                except:
+                    pass
+                if (ratio<0.02)&(onval)&(best_th==None):
+                    best_th = threshold
+                    best_i = i
+                    best_th_precision = precision
+                    print('Best threshold:', best_th)
+                print('Positives:',sum(self.wynik_thresholded[:,1]),\
+                'Ratio:',sum(self.wynik_thresholded[:,1])/self.wynik_thresholded.shape[0],\
+                'Precision:', precision)
+                precisions.append(precision)
+            if plot:
+                plt.plot(thresholds, precisions)
+                plt.title('Validation set precision curve.')
+                plt.show()
+
         if (not self.wynik_done):
             self.dataset.GenXY(2,2)
             X_true, Y_true = self.dataset.X_test, self.dataset.Y_test
@@ -127,15 +198,20 @@ class ModelEvaluator():
             self.wynik = np.concatenate((Y_true, Y_pred), axis=1)
             self.wynik_done = True
         tmp = self.wynik
+        print('Evaluating on test set.')
+
         if (thresholds.__len__()<1):
-            thresholds = np.linspace(0, 1, 20, endpoint=False)
+            thresholds = np.linspace(0, 1, 50, endpoint=False)
         precisions = []
-        for threshold in thresholds:
+        for i, threshold in enumerate(thresholds):
             print("Evaluating for:", threshold)
             wynik_thresholded = deepcopy(tmp)
             wynik_thresholded[:,1] = tmp[:,1]>=threshold
             self.wynik_thresholded = wynik_thresholded.astype(int)
-            print(sum(self.wynik_thresholded[:,1]))
+            ratio = sum(self.wynik_thresholded[:,1])/self.wynik_thresholded.shape[0]
+            
+            
+
             tp_array = wynik_thresholded[:,0] * wynik_thresholded[:,1]
             fp_array = (1 - wynik_thresholded[:,0]) * wynik_thresholded[:,1]
             fn_array = (wynik_thresholded[:,0]) * (1 - wynik_thresholded[:,1])
@@ -145,9 +221,24 @@ class ModelEvaluator():
                 precision = sum(tp_array)/(sum(tp_array)+sum(fp_array))
             except:
                 pass
+            print('Positives:',sum(self.wynik_thresholded[:,1]),\
+                'Ratio:',sum(self.wynik_thresholded[:,1])/self.wynik_thresholded.shape[0],\
+                'Precision:', precision)
             precisions.append(precision)
-        plt.plot(thresholds, precisions)
-        plt.show()
+        if (onval):
+            best_th_test_precision = precisions[best_i]
+        if plot:
+            plt.plot(thresholds, precisions)
+            plt.title('Test set precision curve')
+            plt.show()
+        
+
+        if onval:
+            print('Best threshold:', best_th)
+            print('Validation precision:', best_th_precision)
+            print('Test precision:', best_th_test_precision)
+            print('Expected gain:', best_th_test_precision*(self.no_units_change-1)-(1-best_th_test_precision)*2)
+            return best_th
         
 
 if __name__ == "__main__":
@@ -182,14 +273,18 @@ if __name__ == "__main__":
     
 
     print("\nEvaluating ROC curve for the model.")
-    me.ModelEvaluateRocCurve(thresholds=[])
+    # me.ModelEvaluateRocCurve(thresholds=[])
     print("Successfully evaluated ROC curve for the model.")
 
-    print("\nEvaluating precision curve for the model.")
-    me.ModelEvaluatePrecisionCurve(thresholds=[])
-    print("Successfully evaluated precision curve for the model.")
+    # print("\nEvaluating precision curve for the model.")
+    # me.ModelEvaluatePrecisionCurve(thresholds=[], onval=True)
+    # print("Successfully evaluated precision curve for the model.")
 
-    threshold = 0.6
+    print("\nEvaluating precision curve for the model on the validation set.")
+    threshold = me.ModelEvaluatePrecisionCurve(thresholds=[], onval=True)
+    print("Successfully evaluated precision curve for the model on the validaion set.")
+
+    #threshold = 0.6
     print("\nEvaluating confusion matrix for the model.")
     me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")

@@ -5,9 +5,9 @@
 - [datasetLib.py](datasetLib.py) - working + improvements
 - [modelLib.py](modelLib.py) - done + improvements
 - [evaluateLib.py](evaluateLib.py) - done + improvements
-- [testerLib.py](testerLib.py) - to be done
+- [testLib.py](testerLib.py) - done + improvements
 
-## Next: comment all throuroughly - enough for documentation
+## Next: comment test.Lib, formalize training, alter testing to recreate expected gain
 
 ## getterLib.py
 

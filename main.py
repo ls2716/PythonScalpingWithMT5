@@ -59,8 +59,27 @@ def EvaluateModel(lookup, no_units_change, smm, no_models = 1):
     me.ModelEvaluateConfusionMatrix(threshold=threshold)
     print("Successfully evaluated confusion matrix for the model.")
 
+def GetThreshold(lookup, no_units_change, smm, no_models = 1):
+    print("\n Evaluator initialization.")
+    me = ModelEvaluator(dataset=md, model=smm, no_models=no_models, lookup=lookup,\
+            no_units_change=no_units_change,change_direction='buy')
+    print("Successfully created Evaluator object.")
+    
+    print("\nGetting label setting...")
+    try:
+        md.ReadLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+    except:
+        print('Failed to read - Setting buy labels.')
+        md.SetLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+        md.SaveLabelsBuy(lookup=lookup,no_units_change=no_units_change)
+    print("Successfully loaded labels.")
 
-def TestModel(lookup, no_units_change, smm, no_models = 1):
+    print("\nEvaluating best threshold for the model.")
+    threshold = me.ModelEvaluatePrecisionCurve(thresholds=[], onval=True, plot=True)
+    print("Successfully evaluated best threshold for the model.")
+    return threshold
+
+def TestModel(threshold, lookup, no_units_change, smm, no_models = 1):
     print("\nTesting ModelTester initialization.")
     mt = ModelTester(dataset=md)
     print("Successfully created ModelTester object.")
@@ -76,9 +95,9 @@ def TestModel(lookup, no_units_change, smm, no_models = 1):
     print("Successfully prepared dataframes for simulation.")
     print("\nRunning buy simulations.")
     results = []
-    for th in [ 0.7, 0.8, 0.9]:
-        print('Running with threshold:',th)
-        
+    thresholds = np.linspace(threshold-0.1, threshold+0.15, 10,endpoint=True)
+    for th in thresholds:
+        print('Running with threshold:', th)
         results.append(mt.RunSim(lookup=lookup, no_units_change=no_units_change, threshold=th))
     print("Successfully ran simulation.")
     print("Results:",results)
@@ -91,15 +110,17 @@ md = MinuteDataset(read_ticks=False)
 print(" - Successfully initialized.")
 
 lookups = [5,7,7,9]
-no_units_changes = [5,6,7,7]
+no_units_changes = [3,4,5,7]
 
 RESULTS = []
 for lookup, no_units_change in zip(lookups,no_units_changes):
-    # model = TrainModel(lookup=lookup, no_units_change=no_units_change)
+    #model = TrainModel(lookup=lookup, no_units_change=no_units_change)
     model = SclMinModel(dataset=md, lookup=lookup, no_units_change=no_units_change, change_direction='buy')
     model.CreateModel(model_type='locally_connected')
-    EvaluateModel(lookup=lookup, no_units_change=no_units_change, smm=model)
-    cur_results = TestModel(lookup=lookup, no_units_change=no_units_change, smm=model)
+    # EvaluateModel(lookup=lookup, no_units_change=no_units_change, smm=model)
+    # getting best threshold based on validation set
+    threshold = GetThreshold(lookup=lookup, no_units_change=no_units_change, smm=model)
+    cur_results = TestModel(threshold=threshold, lookup=lookup, no_units_change=no_units_change, smm=model)
     RESULTS.append(cur_results)
 
 

@@ -123,10 +123,13 @@ class ModelTester():
     def RunSim(self, lookup, no_units_change, threshold):
         print('\nRunning simulation.\n')
         self.spread=0.00015
+        self.cum_spread = 0
+        self.steps = 0
         self.verbose=False
         self.lookup = lookup
         self.no_units_change = no_units_change
         self.balance=0
+        self.balance_units = 0
         self.balances=[]
         self.no_buys=0
         self.no_sells=0
@@ -143,7 +146,10 @@ class ModelTester():
             next_hour = self.tick_ar[cur_ind-1,3]
             self.cur_ask = self.tick_ar[cur_ind,0]
             self.cur_bid = self.tick_ar[cur_ind,1]
+            
             self.spread =self.cur_ask-self.cur_bid
+            self.cum_spread+=self.spread
+            self.steps+=1
             if (cur_hour-next_hour==23):
                 if self.bought:
                     self.close_buy()
@@ -155,16 +161,31 @@ class ModelTester():
                     self.minute_index_buy = self.minute_index
                     # self.plot_buy()
 
-                if self.bought:
-                    self.examine_buy()
+            if self.bought:
+                self.examine_buy()
 
             cur_ind-=1
             # if self.no_buys>500:
             #     self.verbose=True
-        print('Balance:',self.balance,'no transactions: ',self.no_buys)
+        
+        try:
+            loss_per_buy = self.balance/self.no_buys
+        except:
+            loss_per_buy = 0
+        try:
+            no_units_per_buy = self.balance_units/self.no_buys
+        except:
+            no_units_per_buy = 0
+        #normalizing
+        mean_spread = self.cum_spread/self.steps
+        norm_loss_per_buy = loss_per_buy/mean_spread/self.unit
+        print('Balance:',self.balance,'no transactions: ',self.no_buys,\
+                'Loss per transaction: ', loss_per_buy,\
+                'Normalized: ', norm_loss_per_buy)
+        print('No units per transaction:', no_units_per_buy)
         # plt.plot(self.balances)
         # plt.show()
-        return (self.balance, self.no_buys)
+        return (self.balance, self.no_buys, loss_per_buy, norm_loss_per_buy)
 
 
     def close_buy(self):
@@ -197,19 +218,22 @@ class ModelTester():
             
         if (self.cur_bid<self.stoplossbuy):
             #print('Sell since stoploss')
-            self.stoplossbuy = self.cur_bid
+            # self.stoplossbuy = self.cur_bid
+            self.balance_units-=2
             self.close_buy()
         elif (self.minutes_passed==self.lookup):
             #print('Sell since minute passed')
             self.stoplossbuy = self.cur_bid
+            self.balance_units+=((self.cur_bid-self.price_bought)/self.spread)
             self.close_buy()
             
         elif (self.cur_bid>self.stoplossbuy+2.05*self.spread):
-            self.stoplossbuy=self.cur_bid-2*self.spread
+            # self.stoplossbuy=self.cur_bid-2*self.spread
             if self.verbose:
                 print('Adjusted stoploss',self.stoplossbuy,'Cur bid',self.cur_bid,'Spread',self.cur_ask-self.cur_bid)
         elif (self.cur_bid>self.price_bought+(self.no_units_change-1)*self.spread):
             self.stoplossbuy = self.cur_bid
+            self.balance_units+=(self.no_units_change-1)
             #print('Sell since expected gain achieved')
             self.close_buy()
             
@@ -253,7 +277,7 @@ if __name__ == "__main__":
 
     lookup = 5
     no_units_change = 3
-    no_models = 3
+    no_models = 1
     # smm.ModelTrain(how_many_models=no_models, epochs=100)
     print("\nTesting ModelTester initialization.")
     mt = ModelTester(dataset=md)
@@ -272,7 +296,7 @@ if __name__ == "__main__":
 
 
     print("\nRunning buy simulation")
-    for th in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+    for th in [0.7]:
         print('Running with threshold:',th)
         mt.RunSim(lookup=lookup, no_units_change=no_units_change, threshold=th)
     print("Successfully ran simulation.")
