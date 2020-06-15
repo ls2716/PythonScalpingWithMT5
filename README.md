@@ -1,13 +1,13 @@
 # ScalpingPythonMT5
 
+## Closed project - go to [conclusions.md](conclusions.md) to read summary and conclusions of the project.
+
 ## Table of contents / current status
 - [getterLib.py](getterLib.py) - done
 - [datasetLib.py](datasetLib.py) - working + improvements
 - [modelLib.py](modelLib.py) - done + improvements
 - [evaluateLib.py](evaluateLib.py) - done + improvements
 - [testLib.py](testerLib.py) - done + improvements
-
-## Next: comment test.Lib, formalize training, alter testing to recreate expected gain
 
 ## getterLib.py
 
